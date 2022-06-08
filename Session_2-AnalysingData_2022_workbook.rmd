@@ -1,0 +1,463 @@
+---
+title: "Session_3-AnalysingData"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_notebook:
+    highlight: pygments
+    number_sections: yes
+    toc: yes
+    toc_depth: 6
+    toc_float:
+      collapsed: yes
+---
+
+
+# Loading packages 
+```{r warning=FALSE, message=FALSE, error=FALSE}
+## Use the code below to check if you have all required packages installed. If some are not installed already, the code given will install and load them.
+requiredPackages = c('tidyverse', 'emmeans', 'knitr', 'Hmisc', 'corrplot')
+for(p in requiredPackages){
+  if(!require(p,character.only = TRUE)) install.packages(p)
+  library(p,character.only = TRUE)
+}
+```
+
+
+In this session, we will look at some functions in R that let us run some inferential statistics. These will help us to evaluate the relationship between one (or more) predictor(s) (independent variable) and an outcome (dependent variable). 
+
+It is important to know the class of the outcome before doing any pre-data analyses or inferential statistics. Data can be:
+
+1. `Numeric`: As an example, we have length/width of leaf; height of mountain; fundamental frequency of the voice; etc. These are `true` numbers and we can use summaries, t-tests, linear models, etc. 
+
+2. `Categorical` (Unordered): Observations for two or more categories. As an example, we can have gender (male or female); Colour (unordered) categorisation, e.g., red, blue, yellow, orange, etc.. 
+
+3. `Categorical` (Ordered): When you run a rating experiment, where the outcome is either `numeric` (i.e., 1, 2, 3, 4, 5) or `categories` (i.e., disagree, neutral, agree). The mean is meaningless here, and the median is a preferred descriptive statistic.
+
+The content will be split into 2 sections. 
+
+1. Pre-data analyses: We will look at summaries, plotting, correlations, checking normality of distribution and homogeneity of variance (for t-tests)
+
+2. Statistical Analyses: t-test, ANOVA, and Linear Models: model estimation, understanding coefficients
+
+
+
+# Pre-data analsyes
+
+## Built-in datasets
+
+We will use one of the datasets built in to `R`. You can check all available datasets in `R` using the following:
+
+```{r}
+data()
+# or below for all datasets available in all installed packages
+data(package = .packages(all.available = TRUE))
+```
+
+We will use the `iris` dataset from the package `MASS`
+
+## Checking structure and summaries
+
+### Structure
+Use the command 'str()' to get a summary of the structure of this data set.
+
+```{r}
+  
+```
+
+So we have a dataframe with 150 observations and 5 variables; 4 numeric and 1 factor with 3 levels. 
+
+### Summary
+
+We can summarise the data to see the trends using the command 'summary()':
+
+```{r}
+
+```
+
+This tells us we have a dataframe with 50 observations under each level of the factor `Species`, and with no missing values (aka `NA`).
+
+For the sake of this exercise we will focus on using the factor 'Species' as an independent, or predictor variable, and 'Sepal.Length' as our dependent, or outcome variable. So we want to know what the species of the iris can tell us about how long its sepals are.
+
+
+#### For a specific variable
+
+If you want to summarise the data and get the mean, SD, by each level of the factor (species) for `Sepal.Length`, use the 'summarise' function. The output here is a 'Tibble', which remember is a simplified data frame used in the Tidyverse. Add in the data set and variables here. 
+
+```{r, eval = FALSE, message = FALSE, error=TRUE}
+iris %>% 
+  group_by() %>% 
+  summarise(
+  SL.Mean = mean(),
+  SL.SD = sd()
+  )
+```
+
+#### For all variables
+If you don't want to pick out specific variables, but summarise all of them, use the function 'summarise_all'- add in the function.
+
+```{r}
+iris %>% 
+  group_by(Species) %>% 
+  (list(mean = mean, sd = sd)
+  )
+```
+
+
+#### Up to you
+
+Do some additional summaries.. You may want to check the `median`, `range`, etc..
+
+Take a few minutes to try out other things.
+
+eg
+
+```{r}
+
+```
+
+
+## Plot
+Let's visualise our data. Start with a boxplot from ggplot. There are other ways to make plots (there's often multiple ways to do the same thing in R, but ggplot is really flexible and aesthetically pleasing). Add in the aes mappings and suitable labels.
+
+
+```{r,warning=FALSE,message=FALSE}
+iris %>% 
+  ggplot(aes()) +
+  geom_boxplot() +
+  labs() + 
+  theme_bw() + theme(text = element_text(size = 15))
+```
+
+Now we can add in a trend line. This allows us to visualise the median, and quantiles in addition to the standard deviation and any outliers... All in the same plot. Add in the geom and aes mappings.
+
+```{r,warning=FALSE,message=FALSE}
+iris %>% 
+  ggplot(aes(x = Species, y = Sepal.Length)) +
+  geom_boxplot() +
+  (aes(x = as.numeric(), y = ), method = "lm") +
+  labs(x = "Species", y = "Sepal length", title = "Boxplot with trend line", subtitle = "with ggplot2") + 
+  theme_bw() + theme(text = element_text(size = 15))
+```
+
+Here we've used the variable `Sepal.Length` as that's what we're focusing on, but you can use any of the additional variables to plot the data. Have a try.
+
+```{r}
+
+```
+
+
+
+## Correlation tests
+Let's do some correlations to explore the structure and relationships in our data set a bit.
+
+We use the function `cor` to obtain the pearson correlation and `cor.test` to run a correlation test on our data with significance testing. Fill in the details to look at the relationship between Sepal Length and Petal Length. Tell these functions which data to work with, you can use '$' to specifiy the variables within your data set. 
+
+```{r}
+cor(, method = "pearson")
+```
+
+```{r}
+cor.test()
+```
+
+### Up to you
+
+Can you check whether there is a correlation between the `Sepal.Length` and the `Petal.Width`? What about `Petal.Length` and `Petal.Width`? 
+
+
+```{r}
+
+```
+
+## Visualising correlations
+
+Above, we did a correlation test on two variables. We can also run and visualise multiple correlations between multiple variables. 
+
+We can do this using the function 'rcorr' from the Hmisc' package. This function requires that we first transform our data from being stored in a data frame to being stored as a matrix. 
+
+These are two different but very common 'data structures' in R. They look the same but behave differently. A matrix is homogenous and holds one class of data. A data frame is more like an excel spreadsheet- it can be heterogenous and hold different classes of data.
+
+The output here gives us first a table of Pearson's r, then a table of p values.
+
+```{r}
+corr <- as.matrix(iris[-5]) %>% 
+  rcorr(type="pearson")
+print(corr)
+```
+
+Using the package 'corrplot' we can visualise these correlations and pick out any patterns in our data.
+
+```{r}
+
+corrplot(corr$r, p.mat = corr$P,
+         addCoef.col = "black", diag = FALSE, type = "upper", tl.srt = 55)
+
+#There's quite a few arguments here. corr$r means plot the r values from our correlation output, p.mat = corr$P means mark the values that are not significant, addCoef.col = "black" means add in the r value in black, diag and type tell R to only include the top half of the correlation matrix, and tl.str specifies the text label string.
+
+#You can also try the simpler 
+
+corrplot(corr$r)
+
+#This presents the same data, but is arguably more difficult to interpret.
+
+```
+
+### Up to you
+
+Look into the `corrplot` specification, using `?corrplot` and amend some of the criteria. For example, you can play around with the 'method' argument. There are seven visualization methods in the corrplot package, named 'circle', 'square', 'ellipse', 'number', 'shade', 'color', 'pie'.
+
+```{r}
+
+
+```
+
+
+Up to now, we have done some basic summaries and checked the correlations in the data. The pearson correlations we have done provided us with significance levels related to the correlations between two numeric outcomes. We continue by checking some common assumptions before running parametric statistics. 
+
+## Normality of distribution
+
+### Subsetting data
+
+In the `iris` dataset, we have a categorical predictor: `Species` which has three levels. Use the function 'levels' to ask how many levels the variale 'Species' has within the 'iris' dataset.
+
+```{r}
+
+```
+
+Let's subset the data to `setosa` and `versicolor`, then we'll check the normality and homogeneity of variance in the data.
+
+We'll use a couple of different %...% operators here:
+
+%...% operators are really flexible. 
+
+%>% is the forward pipe operator- it forwards a value or output of an expression into the next function or expression.
+
+%in% lets you select element(s) that belong to a vector or data frame.
+
+```{r}
+irisSub <- iris %>% 
+  filter(Species %in% c("setosa", "versicolor"))
+```
+
+look at the structure of irisSub - you'll see you've created a new data frame with 100 observations, you've selected two of the three species.
+
+```{r}
+
+```
+
+
+### Shapiro test
+
+To check the normality of our distributions, we use the `shapiro.test`. Our predictor (species) now has two levels, so we'll subset the data to check normality of the outcome `Sepal.Length` for each level of our factor `Species` separately.
+
+Shapiro(-Wilk) tests the null hypothesis that our sample comes from a normally distributed population. 
+
+```{r}
+irisSubSet <- iris %>% 
+  filter(Species == "setosa")
+irisSubVers <- iris %>% 
+  filter(Species == "versicolor")
+  
+shapiro.test(irisSubSet$Sepal.Length)
+shapiro.test(irisSubVers$Sepal.Length)
+```
+
+How to interpret this non-statistically significant result? This tells us that the distribution of the data is not statistically different from a normal distribution. We can accept the null hypothesis.
+
+### Density plot
+
+We can also use a density plot to evaluate normality. The geom 'density' is used to visualise the distribution of our outcome variable (here, sepal length). What's missing from the basic density plot call here? 
+
+```{r}
+irisSub %>% 
+  ggplot(aes(x = Sepal.Length))
+  
+```
+
+We can break the data down by using the call 'facet_wrap()', which let's you visualise the data by whatever factor you specify. We can therefore look at density plots for the two species of iris separately. 
+
+```{r}
+irisSub %>% 
+  ggplot(aes(x = Sepal.Length))+
+  geom_density()+
+  facet_wrap(~Species, scales = "free_x")
+
+#'free_x' allows the scale on the x axis to vary across the two plots
+```
+
+The results show that both levels have bell shaped distributions.
+
+## Homogeneity of variance
+
+Is the distribution of scores around the mean approximately equivalent for values at each level of our predictor variable? (Are the samples from populations with equal variance?)
+
+Because our data are normally distributed, according to the Shapiro test, we can use the `bartlett` test to assess homogeniety of varience. If our data were non-normally distributed, we would use the Levene Test (either with `var.test` from base-R or `leveneTest` from the car package We can check both.
+
+### Bartlett test
+
+```{r}
+irisSub %>% 
+  bartlett.test(Sepal.Length ~ Species, data = .)
+
+```
+
+### Levene test
+Try the Levene test too, using the command 'var.test()'
+
+```{r}
+
+
+```
+
+In both cases, the statistically significant result shows there is evidence that the variance of two levels of the factor `Species` is statistically significant; i.e., the variances are not equal. 
+
+
+# Tests of group difference
+
+Up to now, we have looked at descriptive statistics, and evaluated summaries, correlations in the data (with p values), and checked the normality of distribution of our data.
+
+Now let's run some stats on group differences. 
+
+We'll start with a t-test.
+
+
+## T-test
+We specify the formula here as `y ~ x`. As before, the tilde operator (~) means 'as a function of'. We add `var.equal = FALSE` as we know from the tests we've run that we reject the null hypothesis that the samples come from populations with equal variance.
+
+```{r}
+irisSub %>% 
+  t.test(Sepal.Length ~ Species, data = ., var.equal = FALSE)
+
+#data=. tells R to look for the data piped in.
+```
+
+To interpret the t-test, we say that there is evidence for a statistically significant difference between the two groups: `setosa` and `versicolor`: `t(86) = -10.521, p < 2.2e-16`. The mean of `setosa` is significantly lower than that of `versicolor`.
+
+
+## one way ANOVA
+
+The dataset `iris` contains three species, so we can extend our t-test to an ANOVA. We can use the function `aov` to run an Analysis of Variance on the full dataset. Run the anova and pipe your output into 'summary()'
+
+```{r}
+
+```
+
+Let's remind ourselves that this result makes sense using a simple plot. Note we're not using ggplot here, though obviously we could.
+
+```{r}
+iris%>%
+plot(Sepal.Length ~ Species, data=.)
+
+```
+
+
+# Linear model
+
+We can also look at the relationship between predictor and outcome variables using the linear model. We use the function `lm` to run a linear model. The code here looks identical to the anova code except we tell R to use the function 'lm' instead of 'aov'.
+
+```{r}
+
+```
+
+When lm() encounters a factor variable, it creates a new variable based on each additional level. The intercept here gives an estimate for the mean weight of the first category in our data set and the subsequent estimates give the difference in values between that initial reference level each other level (on average). These are necessarily means because we're thinking about groups here not continuous data points.
+
+But wait... How is the linear model comparable to the analysis of variance we ran above? Notice identical F values. This linear model derives the analysis of variance we saw above.
+
+The underlying basis of an ANOVA is the linear model. We will continue with a linear model to understand it better as it's the basis of many of the common statistical tests we use.
+
+## About the linear Model
+
+The basic assumption of a Linear model is that we have an outcome (or dependent variable) and a predictor (or an independent variable) and that they are linearly related. The formula of a linear model is as follows `outcome ~ predictor` that can be read as "outcome as a function of the predictor". We can add "1" to specify that an intercept should be included, but this is added by default.
+
+(Note that if we were really analysing these data we would check homogeniety of variance across all three levels (this is referred to as homoscadasticity in regression), and we'd be cautious about talking in terms of linear relationships as our factors are not ordered).
+
+### Model estimation
+
+```{r warning=FALSE, message=FALSE, error=FALSE}
+mdl.lm <- iris %>% 
+  lm(Sepal.Length ~ Species, data = .)
+# same as below.
+#mdl.lm <- lm(Sepal.Length ~ 1 + Species, data = iris)
+mdl.lm
+summary(mdl.lm)
+```
+
+
+To interpret the model, we need look at the coefficients. Here our intercept is the value of Y when X = the first category. The `Intercept` in this case is 'Setosa' because it's first alphabetically. Then the other estimates are the difference between the intercept and the other levels. So the second estiamte is the difference in the predicted value in Y for each one-unit difference in X. However, since our predictor is a categorical variable, a one unit difference represents switching from one category to the other.This tells us that compared to `Setosa`, moving from this category to `Versicolor` leads to a significant increase, and for `Virginica`, there is a significant increase too.
+
+
+## Obtaining our "true" coefficients
+
+But where are our actual values based on the means in the table above?
+
+We run a model that suppresses the intercept (i.e., adding 0 instead of 1) and this will allow us to obtain the "true" coefficients for each level of our predictor. Run model mdl.lm.2 with no intercept.
+
+```{r}
+
+```
+
+This matches the original data. 
+
+```{r}
+#Summary of means
+iris %>% 
+  group_by(Species) %>% 
+  summarise(
+  SL.Mean = mean(Sepal.Length),
+  SL.SD = sd(Sepal.Length)
+  )
+
+```
+
+
+## Significance testing
+
+The Null Hypothesis Significance Testing Framework requires that our experimental factor is tested against a hypothesis of no effect or no relationship to the outcome variable. 
+
+The 'fitted' linear model we ran here does two things- it gives us an overall significance (F test for the model as a whole) that states whether the model provides a better fit to the data than a model with no independent variables, and then it tells us about the value added by each individual level of the predictor. We can test out that first part (test the overall significance of the model) but running a null model (aka intercept only) and compare models. Here we're seeing if we can just use the mean of the data set to predict the values of future data points. We can then compare this 'naive' model with the 'fitted' model that adds our hypothetically useful predictor variable(s).
+
+The anova() function takes the model objects as arguments, and returns an ANOVA testing whether the more complex model is significantly better at capturing the data than the simpler model.
+
+```{r warning=FALSE, message=FALSE, error=FALSE}
+mdl.lm.Null <- iris %>% 
+  lm(Sepal.Length ~ 1, data = .)
+mdl.comp <- anova(mdl.lm.Null, mdl.lm)
+mdl.comp
+```
+
+The results show that adding the factor "Species" improves the model fit. We can write this as follows: Model comparison showed that the addition of Species improved the model fit when compared with an intercept only model. 
+
+
+## Confidence intervals
+We can further convince ourselves by looking at confidence intervals for the estimates in our model.
+
+
+```{r}
+confint(mdl.lm.2, level=0.99)
+```
+
+Based on these conference intervals we can expect that if we repeated this sample we would still find significant differences in sepal length based on iris species. Generally, a confidence interval which contains zero means that if we repeated the experiment we might find the reverse trend as presented in our boxplot.
+
+## What about pairwise comparison?
+
+Based on our model's summary, can you tell if there is a difference between Versicolor and Virginica?
+
+```{r}
+summary(mdl.lm)
+```
+
+
+```{r}
+mdl.lm %>% emmeans(pairwise ~ Species, adjust = "bonferroni")
+```
+
+How to interpret the output? Discuss with your neighbour and share with the group.
+
+
+
+# Other outcomes?
+
+So far, we only looked at "Sepal.Length". What about the other outcomes? how informative are they? Do we have statistical difference between the three levels of our predictor? You can do this in your spare time.
+
